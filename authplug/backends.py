@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 from django.contrib.auth.models import User
 from authplug.models import HashKey
 
-class PluggableAuthBackend:
+
+class PluggableAuthBackend(object):
     supports_anonymous_user = False
     supports_object_permissions = False
 

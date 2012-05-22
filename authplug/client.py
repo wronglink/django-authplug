@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime
 import hashlib
 
+
 def datetime_ymdh_str(dt):
     return '%s%s%s%s' % (dt.year, dt.month, dt.day, dt.hour,)
+
 
 def sign(params, salt, date=None):
     items = sorted(params.iteritems())

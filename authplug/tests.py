@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 from copy import deepcopy
 from django.contrib.auth.models import User
 from django.test.client import RequestFactory
 from django.utils import unittest
+from authplug.client import sign
 from authplug.middleware import PluggableAuthMiddleware
-from client import sign
 from authplug.models import HashKey
+
 
 class AuthPlugTestCase(unittest.TestCase):
     def setUp(self):
@@ -14,7 +16,7 @@ class AuthPlugTestCase(unittest.TestCase):
         self.code = 'GOOD'
         self.salt = 'SALT'
         self.hk = HashKey.objects.create(user=self.good_user, code=self.code, salt=self.salt)
-        self.params = {'param1' : 'value1', 'param2': 'value2'}
+        self.params = {'param1': 'value1', 'param2': 'value2'}
         self.factory = RequestFactory()
 
     def fake_view(self, request):
@@ -62,4 +64,4 @@ class AuthPlugTestCase(unittest.TestCase):
         plug_mw.process_request(request=request)
 
         user_as_response = self.fake_view(request)
-        self.assertTrue(user_as_response is None) # no user is in request
+        self.assertTrue(user_as_response is None)  # no user is in request
