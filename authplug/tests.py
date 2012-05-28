@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
+from contextlib import contextmanager
 from copy import deepcopy
 from django.contrib.auth.models import User
 from django.test.client import RequestFactory
-from django.utils import unittest
+from django.test import TestCase
 from authplug.client import sign
 from authplug.middleware import PluggableAuthMiddleware
+from authplug import middleware
 from authplug.models import HashKey
 
 
-class AuthPlugTestCase(unittest.TestCase):
+class AuthPlugTestCase(TestCase):
     def setUp(self):
         self.good_user = User.objects.create_user('John', 'john_smith@example.com', 'password')
         self.bad_user = User.objects.create_user('313373 H4Xor', 'killer@mail.ru',  '12345')
@@ -65,3 +67,30 @@ class AuthPlugTestCase(unittest.TestCase):
 
         user_as_response = self.fake_view(request)
         self.assertTrue(user_as_response is None)  # no user is in request
+
+    def test_params_names_settings(self):
+        with patch_settings('signn', 'codee'):
+            signature = sign(self.params, self.salt)
+            self.params['codee'] = self.code
+            self.params['signn'] = signature
+            request = self.factory.get('/some/private/view/', data=self.params)
+
+            plug_mw = PluggableAuthMiddleware()
+            plug_mw.process_request(request=request)
+
+            user_as_response = self.fake_view(request)
+            self.assertFalse(user_as_response is None, msg='fake_view returned None instead of good_user')
+            self.assertEqual(user_as_response, self.good_user, msg='wrong user returned')
+
+
+@contextmanager
+def patch_settings(sign, code):
+    old_sign = middleware.SIGNATURE_PARAMETER
+    old_code = middleware.CODE_PARAMETER
+    try:
+        middleware.SIGNATURE_PARAMETER = sign
+        middleware.CODE_PARAMETER = code
+        yield
+    finally:
+        middleware.SIGNATURE_PARAMETER = old_sign
+        middleware.CODE_PARAMETER = old_code
