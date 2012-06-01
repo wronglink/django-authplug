@@ -2,10 +2,19 @@
 from datetime import datetime, timedelta
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils.crypto import get_random_string
 from functools import partial
 
 from authplug import client
+
+try:
+    # This function appeared in django 1.4
+    from django.utils.crypto import get_random_string
+except ImportError:
+    import random
+    import string
+    def get_random_string(count):
+        a =  string.ascii_letters + string.digits
+        return ''.join([random.choice(a) for _ in xrange(count)])
 
 
 class HashKey(models.Model):
