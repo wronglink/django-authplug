@@ -1,17 +1,20 @@
+# -*- coding: utf-8 -*-
 from django.contrib.auth import authenticate
+from authplug.settings import SIGNATURE_PARAMETER, CODE_PARAMETER
+
 
 class PluggableAuthMiddleware(object):
     def process_request(self, request):
-        if 'sign' not in request.REQUEST or 'code' not in request.REQUEST:
+        if SIGNATURE_PARAMETER not in request.REQUEST or CODE_PARAMETER not in request.REQUEST:
             return
 
-        signature = request.REQUEST['sign']
-        code = request.REQUEST['code']
+        signature = request.REQUEST[SIGNATURE_PARAMETER]
+        code = request.REQUEST[CODE_PARAMETER]
 
-        params = dict(request.REQUEST) # to copy, not have a link
+        params = dict(request.REQUEST)  # to copy, not have a link
 
-        del params['sign']
-        del params['code']
+        del params[SIGNATURE_PARAMETER]
+        del params[CODE_PARAMETER]
 
         user = authenticate(code=code, params=params, signature=signature)
         if user:

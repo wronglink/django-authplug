@@ -1,24 +1,26 @@
-# -*- coding: UTF-8 -*-
-import string
-import random
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 from django.db import models
 from django.contrib.auth.models import User
-import client
+from functools import partial
 
+from authplug import client
 
-def create_randstring_maker(count):
-    def _make_randstring():
+try:
+    # This function appeared in django 1.4
+    from django.utils.crypto import get_random_string
+except ImportError:
+    import random
+    import string
+    def get_random_string(count):
         a =  string.ascii_letters + string.digits
         return ''.join([random.choice(a) for _ in xrange(count)])
-    
-    return _make_randstring
 
 
 class HashKey(models.Model):
     user = models.OneToOneField(User)
     code = models.SlugField(unique=True)
-    salt = models.CharField(max_length=20, unique=True, default=create_randstring_maker(20))
+    salt = models.CharField(max_length=20, unique=True, default=partial(get_random_string, 20))
 
     @staticmethod
     def sign(params, salt, date=None):

@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from functools import wraps
 from django.http import HttpResponse
 from django.utils.decorators import available_attrs
+
 
 def user_passes_test_403(test_func):
     """
