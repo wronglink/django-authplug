@@ -24,6 +24,16 @@ class AuthPlugTestCase(TestCase):
     def fake_view(self, request):
         return getattr(request, 'user', None)
 
+    def get_auth_header(self, code, signature, auth_scheme="AP"):
+        auth_param = ":".join([code, signature]).encode('base64')
+        return {'HTTP_AUTHORIZATION': "%s %s" % (auth_scheme, auth_param)}
+
+    def get_user_as_response(self, request):
+        plug_mw = PluggableAuthMiddleware()
+        plug_mw.process_request(request=request)
+
+        return self.fake_view(request)
+
     def tearDown(self):
         User.objects.all().delete()
         HashKey.objects.all().delete()
@@ -32,7 +42,7 @@ class AuthPlugTestCase(TestCase):
         signature = sign(self.params, self.salt)
         self.assertTrue(self.hk.signature_ok(self.params, signature))
 
-    def test_good_man_test_middleware(self):
+    def test_good_man_request_params_middleware(self):
         signature = sign(self.params, self.salt)
         self.params['code'] = self.code
         self.params['sign'] = signature
@@ -41,31 +51,37 @@ class AuthPlugTestCase(TestCase):
 
         # middleware testing...
         request = self.factory.get('/some/private/view/', data=self.params)
-
-        plug_mw = PluggableAuthMiddleware()
-        plug_mw.process_request(request=request)
-
-        user_as_response = self.fake_view(request)
+        user_as_response = self.get_user_as_response(request)
 
         self.assertFalse(user_as_response is None, msg='fake_view returned None instead of good_user')
-
         self.assertEqual(user_as_response, self.good_user, msg='wrong user returned')
-
         # params were not hurt...
         self.assertEqual(params_copy, self.params, msg='params were likely hurt in the middleware')
 
-    def test_bad_user_attempt(self):
+    def test_bad_user_request_params_attempt(self):
         signature = sign(self.params, 'BAD SALT')
         self.params['code'] = self.code
         self.params['sign'] = signature
 
         # middleware testing...
         request = self.factory.get('/some/private/view/', data=self.params)
+        user_as_response = self.get_user_as_response(request)
 
-        plug_mw = PluggableAuthMiddleware()
-        plug_mw.process_request(request=request)
+        self.assertTrue(user_as_response is None)  # no user is in request
 
-        user_as_response = self.fake_view(request)
+    def test_good_man_http_header_middleware(self):
+        signature = sign(self.params, self.salt)
+        request = self.factory.get('/some/private/view/', self.params, **self.get_auth_header(self.code, signature))
+        user_as_response = self.get_user_as_response(request)
+
+        self.assertFalse(user_as_response is None, msg='fake_view returned None instead of good_user')
+        self.assertEqual(user_as_response, self.good_user, msg='wrong user returned')
+
+    def test_bad_user_http_header_attempt(self):
+        signature = sign(self.params, 'BAD SALT')
+        request = self.factory.get('/some/private/view/', self.params, **self.get_auth_header(self.code, signature))
+        user_as_response = self.get_user_as_response(request)
+
         self.assertTrue(user_as_response is None)  # no user is in request
 
     def test_params_names_settings(self):
@@ -73,12 +89,10 @@ class AuthPlugTestCase(TestCase):
             signature = sign(self.params, self.salt)
             self.params['codee'] = self.code
             self.params['signn'] = signature
+
             request = self.factory.get('/some/private/view/', data=self.params)
+            user_as_response = self.get_user_as_response(request)
 
-            plug_mw = PluggableAuthMiddleware()
-            plug_mw.process_request(request=request)
-
-            user_as_response = self.fake_view(request)
             self.assertFalse(user_as_response is None, msg='fake_view returned None instead of good_user')
             self.assertEqual(user_as_response, self.good_user, msg='wrong user returned')
 
@@ -94,3 +108,4 @@ def patch_settings(sign, code):
     finally:
         middleware.SIGNATURE_PARAMETER = old_sign
         middleware.CODE_PARAMETER = old_code
+

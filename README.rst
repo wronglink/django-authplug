@@ -55,7 +55,7 @@ Simply run:
 
 Now you can try to ``import authplug`` in python console.
 
-Signing json-requests in your code.
+Signing json-requests in your code via REQUEST parameters:
 ::
 
     import urllib
@@ -76,6 +76,34 @@ Signing json-requests in your code.
 
     try:
         u = urllib2.urlopen('http://example.com/some_service_uri/', data=urllib.urlencode(data))
+        result = json.loads(u.read())
+    except Exception as e:
+        print 'Fail', e
+    else:
+        print 'Result:', result
+
+Signing json-requests in your code via HTTP Authorization header:
+::
+
+    import urllib
+    import urllib2
+    from django.conf import settings
+    from authplug.client import sign
+
+    data = {
+        'param1': 'value1',
+        'param2': 'value2',
+        # ...
+        'paramN': 'valueN',
+    }
+
+    signature = sign(data, settings.MY_SECRET_KEY)
+    auth = ":".join([settings.MY_SECRET_ID, signature]).encode('base64').replace('\n', '')
+    auth_header = {'Authorization': "AP %s" % auth}
+
+    try:
+        req = urllib2.Request('http://example.com/some_service_uri/', urllib.urlencode(data), auth_header)
+        u = urllib2.urlopen(req)
         result = json.loads(u.read())
     except Exception as e:
         print 'Fail', e
